@@ -117,6 +117,10 @@ input[type=text]{font-size:18px}
 .opt{display:flex;align-items:center;gap:12px;padding:14px;font-family:'VT323','Pixelify Sans',ui-monospace,monospace;font-size:1.55rem;font-weight:400;letter-spacing:.01em;line-height:1.15}
 .opt .ic{font-size:1.7rem;line-height:1;flex:none}
 .opt .num{font-size:1em;font-weight:400;letter-spacing:.06em}
+#gl{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.stage{z-index:1}
+.gl #s4,.gl #s5{background:none}
+.gl .hint{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -245,8 +249,97 @@ function paint(){mb.textContent=muted?'🔇':'🔊'}
 paint();
 mb.addEventListener('click',()=>{muted=!muted;try{localStorage.setItem('sonu-mute',muted?'1':'0')}catch(_){}paint();SFX.tick()});
 
+/* ---------- 3D liquid background (WebGL) ---------- */
+const FL=(function(){
+  const no={stage(){},lvl(){},kick(){}};
+  try{
+    const cv=document.createElement('canvas');cv.id='gl';
+    const gl=cv.getContext('webgl',{antialias:false,alpha:false,powerPreference:'low-power'});
+    if(!gl)return no;
+    const sh=(t,src)=>{const o=gl.createShader(t);gl.shaderSource(o,src);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw 0;return o};
+    const pr=gl.createProgram();
+    gl.attachShader(pr,sh(gl.VERTEX_SHADER,'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));
+    gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,`#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 R;uniform float T,E,K,D;uniform vec3 M;
+float F(vec2 p){
+  float a=.8+E*.4;
+  for(int i=1;i<5;i++){
+    float f=float(i);
+    p+=a/f*vec2(sin(f*p.y*1.6+T*.8+f),cos(f*p.x*1.4+T*.65-f*1.3));
+  }
+  return .5+.5*sin(p.x*1.1+p.y*.9+T*.3);
+}
+void main(){
+  vec2 uv=gl_FragCoord.xy/R;
+  float asp=R.x/R.y;
+  vec2 p=(uv-.5)*vec2(asp,1.)*3.4;
+  vec2 q=(uv-M.xy)*vec2(asp,1.);
+  float mf=exp(-dot(q,q)*9.)*M.z;
+  p+=vec2(-q.y,q.x)*mf*3.+q*mf*1.4;
+  float e=.02;
+  float h=F(p);
+  vec2 g=clamp(vec2(h-F(p+vec2(e,0.)),h-F(p+vec2(0.,e)))/e,-6.,6.)*.11;
+  vec3 n=normalize(vec3(g,1.));
+  vec3 L=normalize(vec3(-.45,.6,.7));
+  float diff=clamp(dot(n,L),0.,1.);
+  float spec=pow(clamp(dot(n,normalize(L+vec3(0.,0.,1.))),0.,1.),60.);
+  float fres=pow(1.-n.z,1.5);
+  float env=.5+.5*reflect(vec3(0.,0.,-1.),n).y;
+  vec3 A=mix(vec3(1.,.55,.74),vec3(.5,.13,.3),D);
+  vec3 B=mix(vec3(.72,.62,1.),vec3(.25,.18,.5),D);
+  vec3 C=mix(vec3(1.,.78,.62),vec3(.5,.24,.3),D);
+  A=mix(A,vec3(.9,.18,.45),K);B=mix(B,vec3(.45,.07,.36),K);C=mix(C,vec3(1.,.42,.42),K);
+  vec3 col=mix(mix(A,B,smoothstep(.15,.85,h)),C,.7*smoothstep(.3,.9,.5+.5*sin(h*6.+T*.3+p.x)));
+  col=mix(col*.9,col*1.1+.05,env);
+  col*=.7+.4*diff;
+  col+=spec*(.5+.4*(1.-D));
+  col+=fres*vec3(.4,.3,.6)*(.45+.4*K);
+  col*=1.-.3*dot(uv-.5,uv-.5);
+  gl_FragColor=vec4(col,1.);
+}
+`));
+    gl.linkProgram(pr);if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw 0;
+    gl.useProgram(pr);
+    const bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    const la=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(la);gl.vertexAttribPointer(la,2,gl.FLOAT,false,0,0);
+    const U={};['R','T','E','K','D','M'].forEach(k=>U[k]=gl.getUniformLocation(pr,k));
+    document.body.prepend(cv);root.classList.add('gl');
+    cv.addEventListener('webglcontextlost',e=>{e.preventDefault();cv.style.display='none';root.classList.remove('gl')});
+    let scale=.6,W,H,T=0,last=performance.now(),base=0,kick=0,E=0,K=0,Kt=0,mx=.5,my=.5,tx=.5,ty=.5,ms=0,fr=0,acc=0;
+    const dm=matchMedia('(prefers-color-scheme: dark)'),red=matchMedia('(prefers-reduced-motion: reduce)').matches?.3:1;
+    function size(){W=cv.width=Math.max(2,innerWidth*scale|0);H=cv.height=Math.max(2,innerHeight*scale|0);gl.viewport(0,0,W,H)}
+    size();addEventListener('resize',size);
+    function mv(x,y){const nx=x/innerWidth,ny=1-y/innerHeight;ms=Math.min(1,ms+Math.hypot(nx-tx,ny-ty)*6);tx=nx;ty=ny}
+    const tm=e=>{const t=e.touches[0];if(t)mv(t.clientX,t.clientY)};
+    addEventListener('touchstart',tm,{passive:true});addEventListener('touchmove',tm,{passive:true});
+    addEventListener('mousemove',e=>mv(e.clientX,e.clientY),{passive:true});
+    function frame(now){
+      const dt=Math.min(.05,(now-last)/1000);last=now;
+      kick*=Math.exp(-dt*1.6);
+      E+=(Math.min(1.4,base+kick)-E)*Math.min(1,dt*4);K+=(Kt-K)*Math.min(1,dt*1.5);
+      ms*=Math.exp(-dt*2.2);mx+=(tx-mx)*Math.min(1,dt*10);my+=(ty-my)*Math.min(1,dt*10);
+      T+=dt*(.55+E*1.4)*red;
+      gl.uniform2f(U.R,W,H);gl.uniform1f(U.T,T);gl.uniform1f(U.E,E);gl.uniform1f(U.K,K);gl.uniform1f(U.D,dm.matches?1:0);gl.uniform3f(U.M,mx,my,ms);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      acc+=dt;if(++fr===45){if(acc/45>.034&&scale>.3){scale*=.8;size()}fr=0;acc=0}
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    return{
+      stage(n){base=[0,0,.1,.35,.75,.75][n]||0;Kt=n>=4?1:0;kick=Math.max(kick,1)},
+      lvl(v){base=.1+v*.7},
+      kick(k){kick=Math.max(kick,k)}
+    };
+  }catch(_){return no}
+})();
+
 /* ---------- stage switching ---------- */
-function go(n){
+function go(n){FL.stage(n);
   const cur=document.querySelector('.stage.active');if(cur)cur.classList.remove('active');
   setTimeout(()=>{$('s'+n).classList.add('active');if(n===4){SFX.reveal();setInterval(()=>spawn(Math.random()*innerWidth,innerHeight-10,1,-innerHeight*.85),340);setTimeout(()=>$('more').classList.add('on'),5500)}},500);
 }
@@ -265,7 +358,7 @@ function fs(){
 function check(){fs();
   if($('pw').value.trim().toLowerCase()==='shelly'){
     $('err').textContent='';$('go').disabled=true;$('pw').blur();
-    SFX.ok();spawn(innerWidth/2,innerHeight/2,10,-220);go(2);return;
+    SFX.ok();FL.kick(1);spawn(innerWidth/2,innerHeight/2,10,-220);go(2);return;
   }
   let i;do{i=Math.random()*MSG.length|0}while(i===last);last=i;
   SFX.bad();$('err').textContent=MSG[i];
@@ -277,7 +370,7 @@ $('pw').addEventListener('keydown',e=>{if(e.key==='Enter')check()});
 /* ---------- stage 2: slider ---------- */
 const sl=$('sl');
 sl.addEventListener('input',()=>{
-  const v=+sl.value;$('pv').textContent=v;sl.style.setProperty('--p',v+'%');
+  const v=+sl.value;$('pv').textContent=v;FL.lvl(v/100);sl.style.setProperty('--p',v+'%');
   const r=sl.getBoundingClientRect(),x=r.left+19+(r.width-38)*v/100,y=r.top+r.height/2;
   if(Math.random()<.75)spawn(x,y,Math.random()<.35?2:1);
   if(v>=100){sl.disabled=true;SFX.win();spawn(x,y,14,-240);setTimeout(()=>go(3),1100)}else slideSnd(v);
@@ -320,7 +413,7 @@ function end(q){
   const s=q&&nearest(q.x,q.y-LIFT,w,h);
   if(s){
     if(s.dataset.r===p.dataset.r){
-      SFX.snap();s.append(p);p.dataset.done=1;p.classList.add('placed','lock');s.classList.add('full');
+      SFX.snap();FL.kick(.7);s.append(p);p.dataset.done=1;p.classList.add('placed','lock');s.classList.add('full');
       spawn(s.getBoundingClientRect().left+w/2,s.getBoundingClientRect().top+h/2,4,-120);
       if(++got===3){setTimeout(SFX.win,200);setTimeout(()=>go(4),1000)}
     }else{SFX.bad();s.classList.add('bad');setTimeout(()=>s.classList.remove('bad'),350)}
@@ -342,7 +435,7 @@ const GIF='data:image/webp;base64,UklGRgIZFwBXRUJQVlA4WAoAAAASAAAAjwEAxgIAQU5JTQ
 const RL=["Ouch 💔","Hmm, okay 😤","Not bad 😌","Pretty great! 🥰","10/10, would be booked again 😍"],stars=$('stars');
 $('more').addEventListener('click',()=>{SFX.tick();go(5)});
 stars.addEventListener('click',e=>{
-  const n=+e.target.dataset.n;if(!n)return;SFX.star(n);
+  const n=+e.target.dataset.n;if(!n)return;SFX.star(n);FL.kick(.35);
   [...stars.children].forEach((s,i)=>s.classList.toggle('on',i<n));
   $('rl').textContent=RL[n-1];$('acts').hidden=false;
   const r=e.target.getBoundingClientRect();spawn(r.left+r.width/2,r.top,3,-140);
@@ -369,7 +462,7 @@ $('tipyes').addEventListener('click',()=>{SFX.coin();
   stars.hidden=$('acts').hidden=$('rl').hidden=true;$('rt').textContent='Choose your tip 🪙';$('tips').hidden=false;
 });
 $('tips').addEventListener('click',e=>{
-  if(!e.target.closest('.opt'))return;SFX.gift();
+  if(!e.target.closest('.opt'))return;SFX.gift();FL.kick(1);
   $('tips').hidden=true;$('rt').textContent='Tip received 🪙💖';
   $('gif').src=GIF;$('fin').hidden=false;spawn(innerWidth/2,innerHeight*.6,16,-300);
 });
