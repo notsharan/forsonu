@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="For Sonu">
 <title>For Sonu 💕</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@500;700&family=VT323&display=swap" rel="stylesheet">
 <style>
 :root{--bg1:#ffe9f1;--bg2:#ece6ff;--bg3:#ffd9c7;--card:#fff;--ink:#4a2b3d;--muted:#a07a8f;--acc:#ff5c93;--acc2:#ff9dc0;--line:#ffd6e5;--shadow:rgba(255,92,147,.28);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2b1424;--bg2:#1d1835;--bg3:#3a1f2c;--card:#3b2234;--ink:#ffe9f1;--muted:#d8a8c0;--acc:#ff7aa8;--acc2:#ff9dc0;--line:#5b3349;--shadow:rgba(0,0,0,.45)}}
@@ -114,6 +114,9 @@ input[type=text]{font-size:18px}
 #fin p.sig{font-size:.9rem;font-weight:500;line-height:1.5;color:var(--muted);margin-top:14px}
 #mute{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;z-index:120;width:38px;height:38px;padding:0;margin:0;border-radius:50%;font-size:1rem;line-height:1;background:var(--card);box-shadow:2px 2px 0 var(--ink);opacity:.75;display:flex;align-items:center;justify-content:center}
 #mute:active{transform:translate(1px,1px)}
+.opt{display:flex;align-items:center;gap:12px;padding:14px;font-family:'VT323','Pixelify Sans',ui-monospace,monospace;font-size:1.55rem;font-weight:400;letter-spacing:.01em;line-height:1.15}
+.opt .ic{font-size:1.7rem;line-height:1;flex:none}
+.opt .num{font-size:1em;font-weight:400;letter-spacing:.06em}
 </style>
 </head>
 <body>
@@ -152,11 +155,11 @@ input[type=text]{font-size:18px}
     <p class="hint" id="rl">tap the stars</p>
     <div id="acts" hidden><button id="tipyes">Add a tip 🪙</button><button id="tipno" class="ghost">Maybe later</button><span class="hand" id="hand" hidden></span></div>
     <div id="tips" hidden>
-      <button class="opt">Let Sharan have another peek at your hotness (ONLY IF WE ARE PARKED)</button>
-      <button class="opt">Give Sharan a peck (cheek of your choice, I guess)</button>
-      <button class="opt">Let Sharan take the most perfect <b class="num">0.5</b> photo of your takla</button>
-      <button class="opt">Give Sharan a cute print of you both for his wallet</button>
-      <button class="opt all">ALL OF THE ABOVE (PLSSSSSS)</button>
+      <button class="opt"><span class="ic">👀</span><span>Let Sharan have another peek at your hotness (ONLY IF WE ARE PARKED)</span></button>
+      <button class="opt"><span class="ic">😘</span><span>Give Sharan a peck (cheek of your choice, I guess)</span></button>
+      <button class="opt"><span class="ic">📸</span><span>Let Sharan take the most perfect <b class="num">0.5</b> photo of your takla</span></button>
+      <button class="opt"><span class="ic">🖼️</span><span>Give Sharan a cute print of you both for his wallet</span></button>
+      <button class="opt all"><span class="ic">💖</span><span>ALL OF THE ABOVE (PLSSSSSS)</span></button>
     </div>
     <div id="fin" hidden><p>I know you are gonna give me every single of those asks, anyways</p><img id="gif" alt=""><p class="sig">Loveyou ofc always,<br>Sharan</p></div>
   </div>
